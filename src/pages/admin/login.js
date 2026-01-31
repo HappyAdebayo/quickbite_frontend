@@ -25,6 +25,7 @@ export default function LoginPage() {
 
       localStorage.setItem("token", data.token);
       localStorage.setItem("adminEmail", data.admin.email);
+      localStorage.setItem("adminLoggedIn", 'true');
 
       navigate("/admin");
     } catch (err) {

@@ -2,7 +2,6 @@
 export function CartSidebar({ cart, onQuantityChange, onRemove, onPlaceOrder, orderPlaced, onClose }) {
   const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    console.log(cart,'cart');
 
   return (
     <div

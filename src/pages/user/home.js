@@ -8,13 +8,16 @@ import { useApi } from "../../hooks/useApi";
 
 function UserApp() {
 
-  const { request, loading, error } = useApi();
+  const { request } = useApi();
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [filter, setFilter] = useState("All");
   const [cart, setCart] = useState([]);
   const [menus, setMenus] = useState([]);
   const [currentOrder, setCurrentOrder] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+
+  const [toast, setToast] = useState({ message: "", visible: false });
+
 
   const [categories, setCategories] = useState([]);
 
@@ -31,15 +34,30 @@ function UserApp() {
 
   const displayedProducts = filter === "All" ? menus : menus.filter(product => product.type === filter);
 
-  const addToCart = (product) => {
+  const addToCart = (product, qty) => {
+    if (qty <= 0) return;
+
     const exists = cart.find(item => item.id === product.id);
+
     if (exists) {
-      setCart(cart.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item));
+      setCart(prev =>
+        prev.map(item =>
+          item.id === product.id
+            ? { ...item, quantity: item.quantity + qty }
+            : item
+        )
+      );
     } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
+      setCart(prev => [...prev, { ...product, quantity: qty }]);
     }
-    
+
+    setToast({ message: `${product.name} added to cart`, visible: true });
+
+    setTimeout(() => {
+      setToast(t => ({ ...t, visible: false }));
+    }, 2500);
   };
+
 
   const updateQuantity = (id, qty) => {
     if (qty <= 0) return;
@@ -69,10 +87,28 @@ function UserApp() {
     }
   };
 
-  const completeOrder = () => {
-    setCurrentOrder(null);
-    setCart([]);
-  };
+
+  useEffect(() => {
+  if (!currentOrder) return;
+
+  const interval = setInterval(async () => {
+    try {
+      const data = await request("get", `/user/orders/${currentOrder.order_id}`);
+
+      if (data.order.status === "completed") {
+        
+        setModalVisible(false);
+        setCurrentOrder(null);
+        setCart([]);
+      }
+    } catch (err) {
+      console.error("Order polling failed:", err);
+    }
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, [currentOrder]);
+
 
   return (
     <div className="App">
@@ -101,12 +137,11 @@ function UserApp() {
             description={product.description}
             price={product.price}
             disabled={!!currentOrder} 
-            onAdd={() => addToCart(product)}
+             onAdd={(qty) => addToCart(product, qty)}
           />
         ))}
       </div>
 
-      {/* Cart Sidebar */}
       {sidebarVisible && cart.length > 0 && (
         <CartSidebar
           cart={cart}
@@ -125,23 +160,57 @@ function UserApp() {
         />
       )}
 
-      {currentOrder && (
-        <div style={{ textAlign: "center", marginTop: "20px" }}>
-          <button
-            onClick={completeOrder}
-            style={{
-              padding: "8px 16px",
-              borderRadius: "6px",
-              border: "none",
-              backgroundColor: "#28a745",
-              color: "#fff",
-              cursor: "pointer",
-            }}
-          >
-            Admin Completes Order
-          </button>
-        </div>
-      )}
+      <div
+  style={{
+    position: "fixed",
+    top: "20px",
+    right: "20px",
+    transform: toast.visible
+      ? "translateY(0) scale(1)"
+      : "translateY(-20px) scale(0.95)",
+    opacity: toast.visible ? 1 : 0,
+    transition: "all 0.3s ease",
+    pointerEvents: toast.visible ? "auto" : "none",
+    zIndex: 1000,
+  }}
+>
+  <div
+    style={{
+      backgroundColor: "#28a745",
+      color: "#fff",
+      padding: "12px 16px",
+      borderRadius: "10px",
+      fontWeight: "600",
+      boxShadow: "0 6px 18px rgba(0,0,0,0.18)",
+      display: "flex",
+      alignItems: "center",
+      gap: "12px",
+      minWidth: "220px",
+    }}
+  >
+    <span>{toast.message}</span>
+
+    <button
+      onClick={() =>
+        setToast(t => ({ ...t, visible: false }))
+      }
+      style={{
+        background: "transparent",
+        border: "none",
+        color: "#fff",
+        fontSize: "18px",
+        cursor: "pointer",
+        marginLeft: "auto",
+        lineHeight: 1,
+      }}
+      aria-label="Close"
+    >
+      ×
+    </button>
+  </div>
+</div>
+
+
     </div>
   );
 }

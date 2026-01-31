@@ -18,7 +18,6 @@ export default function OrdersPage() {
       fetchOrders();
     }, []);
 
-    console.log(orders,'orders');
     
 
 const updateStatus = async (orderId, currentStatus) => {

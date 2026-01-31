@@ -59,13 +59,14 @@ export default function MenuPage() {
   };
 
   const openEditForm = (item) => {
+    
     setEditingItem(item);
     setFormData({
       name: item.name,
       description: item.description,
       price: item.price,
       image: item.image,
-      categoryId: item.categoryId,
+      categoryId: item.category_id,
     });
     setShowForm(true);
   };
@@ -92,16 +93,29 @@ export default function MenuPage() {
     let data;
 
     if (editingItem) {
-      form.append("_method", "PUT");
+        form.append("_method", "PUT");
 
-      data = await request( "post", `/admin/menus/${editingItem.id}`, form);
+        const data = await request(
+          "post",
+          `/admin/menus/${editingItem.id}`,
+          form
+        );
 
-      setMenuItems((prev) =>
-        prev.map((item) =>
-          item.id === editingItem.id ? data.menu : item
-        )
-      );
-    } else {
+        const updatedMenu = {
+          ...data.menu,
+          category_id: Number(
+            data.menu.category_id ??
+            data.menu.category?.id ??
+            formData.categoryId
+          ),
+        };
+
+        setMenuItems((prev) =>
+          prev.map((item) =>
+            item.id === editingItem.id ? updatedMenu : item
+          )
+        );
+      }else {
       data = await request("post", "/admin/menus", form);
 
       setMenuItems((prev) => [...prev, data.menu]);
@@ -129,7 +143,7 @@ export default function MenuPage() {
 
 };
 
-  const filteredItems = currentFilter === "All" ? menuItems : menuItems.filter(item => item.categoryId === categories.find(cat => cat.name === currentFilter)?.id);
+  const filteredItems = currentFilter === "All" ? menuItems : menuItems.filter(item => item.category_id === categories.find(cat => cat.name === currentFilter)?.id);
 
   return (
     <div className="menu-page">

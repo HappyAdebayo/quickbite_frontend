@@ -14,7 +14,7 @@ export default function MenuForm({ formData, setFormData, categories, onSubmit, 
     <div className="form-overlay">
       <form className="menu-form" onSubmit={onSubmit}>
         <h2>{editing ? "Edit Menu" : "Add New Menu"}</h2>
-      {error && <p style={{ color: "red" }}>{JSON.stringify(Object.values(error)[0])}</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
         <input
           type="text"

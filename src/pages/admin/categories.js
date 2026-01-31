@@ -7,7 +7,12 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState([]);
   const { request, loading } = useApi();
   const [showForm, setShowForm] = useState(false);
-  const [newCategory, setNewCategory] = useState("");
+  const [formData, setFormData] = useState({
+  name: "",
+  description: "",
+  image: null,
+});
+
   const [error, setError]= useState()
 
   useEffect(() => {
@@ -15,7 +20,6 @@ export default function CategoriesPage() {
       try {
         const data = await request("get", "/admin/categories");
         setCategories(data.categories);
-        
       } catch (err) {
         console.error("Failed to fetch categories:", err);
       }
@@ -25,36 +29,37 @@ export default function CategoriesPage() {
   }, []);
 
 
-  const addCategory = async (e) => {
-      e.preventDefault();
-      if (!newCategory.trim()) return;
-  
-      try {
-        const data = await request("post", "/admin/categories", {
-          name: newCategory.trim().toLowerCase(),
-        });
-  
-        setCategories([...categories, data.category]);
-        setNewCategory("");
-        setShowForm(false);
-      } catch (err) {
-        console.error("Failed to add category:", err);
-        // alert(
-        //   err.errors
-        //     ? Object.values(err.errors).flat().join(", ")
-        //     : err.message || "Failed to add category"
-        // );
+const addCategory = async (e) => {
+  e.preventDefault();
 
-        if (err.response && err.response.status === 422) {
-          const errors = err.response.data.errors;
-          const messages = Object.values(errors).flat().join("\n"); 
-          setError(messages);
-        } else {
-          console.error("Failed to save menu:", err);
-          setError("Failed to save menu. See console for details.");
-        }
-      }
-    };
+  if (!formData.name.trim()) return;
+
+  try {
+    const payload = new FormData();
+    payload.append("name", formData.name.trim().toLowerCase());
+    payload.append("description", formData.description);
+
+    if (formData.image) {
+      payload.append("image", formData.image);
+    }
+
+    const data = await request("post", "/admin/categories", payload);
+
+    setCategories([...categories, data.category]);
+    setFormData({ name: "", description: "", image: null });
+    setShowForm(false);
+    setError(null);
+  } catch (err) {
+    console.error("Failed to add category:", err);
+
+    if (err.response?.status === 422) {
+      setError(err.response.data.errors);
+    } else {
+      setError({ general: ["Failed to save category"] });
+    }
+  }
+};
+
   
     const deleteCategory = async (id) => {
       try {
@@ -74,20 +79,31 @@ export default function CategoriesPage() {
       </div>
 
       {showForm && (
-        <CategoryForm
-          categoryName={newCategory}
-          setCategoryName={setNewCategory}
-          onSubmit={addCategory}
-          onCancel={() => setShowForm(false)}
-          error={error}
-        />
-      )}
+  <CategoryForm
+    formData={formData}
+    setFormData={setFormData}
+    onSubmit={addCategory}
+    onCancel={() => setShowForm(false)}
+    loading={loading}
+    error={error}
+  />
+)}
+
 
       <div className="categories-grid">
         {categories.map((cat) => (
           <div className="category-card" key={cat.id}>
+            {cat.image && (
+              <img
+                src={`http://localhost:8000/storage/${cat.image}`}
+                 style={{ width: "100%", height: "160px", objectFit: "cover", borderRadius: "8px" }}
+                alt={cat.name}
+              />
+            )}
             <h3>{capitalizeFirstLetter(cat.name)}</h3>
-            <button className="delete-btn" onClick={() => deleteCategory(cat.id)}>Delete</button>
+            <button className="delete-btn" onClick={() => deleteCategory(cat.id)}>
+              Delete
+            </button>
           </div>
         ))}
       </div>
@@ -124,10 +140,11 @@ export default function CategoriesPage() {
           border: 1px solid #eee;
           border-radius: 12px;
           padding: 16px;
-          width: 180px;
+          width: 200px;
           display: flex;
+          flex-direction: column;
+          gap: 12px;
           justify-content: space-between;
-          align-items: center;
           box-shadow: 0 4px 8px rgba(0,0,0,0.05);
         }
 
